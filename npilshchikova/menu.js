@@ -4,14 +4,21 @@
 module.exports = {
 
     items: [],
+    _submitted: false,
 
     /**
-     * Add new Humburger with stuffing and size specified to menu
+     * Add new Humburger with stuffing and size specified to order
      * 
      * @param {String} size 
      * @param {String} stuffing 
      */
     addHamburger(size, stuffing) {
+
+        if (this._submitted) {
+            console.log('order was submitted and can not be updated any more');
+            return this;
+        }
+
         var newStuffing;
         var newHamburger;
 
@@ -33,22 +40,29 @@ module.exports = {
                 newHamburger = new Hamburger(size, stuffing=newStuffing, price=50, calories=20);
                 break;
             default:
-                newHamburger = new Hamburger(size, stuffing=Stuffing, price=100, calories=40);
+                newHamburger = new Hamburger(size, stuffing=newStuffing, price=100, calories=40);
         }
 
-        // add Hamburger to menu
+        // add Hamburger to order
         this.items.push(newHamburger);
+        console.log(newHamburger.type, newHamburger.size, 
+            'with', newHamburger.stuffing.name, 'added to order');
 
         return this;
     },
 
     /**
-     * Add defined amount of Salad to menu
+     * Add defined amount of Salad to order
      * 
      * @param {String} name 
      * @param {Number} weight 
      */
     addSalad(name, weight) {
+
+        if (this._submitted) {
+            console.log('order was submitted and can not be updated any more');
+            return this;
+        }
         
         // if Salad already added, just increase it's amount
         var saladFound = false;
@@ -57,6 +71,7 @@ module.exports = {
             if (nextItem.type === Meal.SALAD && nextItem.name === name) {
                 nextItem.weight += weight;
                 saladFound = true;
+                console.log(String(weight), 'gramm of', name, Meal.SALAD, 'added to order');
             }
         }
 
@@ -72,17 +87,24 @@ module.exports = {
                     newSalad = new Salad(name, weight, price=100, calories=20);
             }
             this.items.push(newSalad);
+            console.log(String(weight), 'gramm of', newSalad.name, Meal.SALAD, 'added to order');
         }
 
         return this;
     },
 
     /**
-     * Add defined Drink to menu
+     * Add defined Drink to order
      * 
      * @param {String} name 
      */
     addDrink(name) {
+
+        if (this._submitted) {
+            console.log('order was submitted and can not be updated any more');
+            return this;
+        }
+
         var newDrink;
 
         // select drink
@@ -94,34 +116,130 @@ module.exports = {
                 newDrink = new Drink(name, price=80, calories=20);
         }
 
-        // add Hamburger to menu
+        // add Drink to order
         this.items.push(newDrink);
+        console.log(newDrink.name, 'added to order');
 
         return this;
     },
 
     removeHamburger(size, stuffing) {
-        // remove current Hamburger if exists
+
+        if (this._submitted) {
+            console.log('order was submitted and can not be updated any more');
+            return this;
+        }
+
+        // try to find hamburger in order
+        var index = -1;
+        for (var i = 0; i < this.items.length; i++) {
+            var nextItem = this.items[i];
+            if (nextItem.type === Meal.HAMBURGER & nextItem.size === size & nextItem.stuffing.name === stuffing) {
+                index = i;
+                break
+            }
+        }
+
+        // remove hamburger if found
+        if (index >= 0) {
+            var removedItem = this.items.splice(index, 1);
+            console.log(Meal.HAMBURGER, removedItem[0].size, 'with', stuffing, 'was removed from order');
+        } else {
+            console.log(Meal.HAMBURGER, size, 'with', stuffing, 'to remove not found in order');
+        }
+
+        return this;
     },
 
     removeSalad(name, weight) {
-        // remove target amount of salad from items array if exists
+
+        if (this._submitted) {
+            console.log('order was submitted and can not be updated any more');
+            return this;
+        }
+
+        // try to find salad in order
+        var index = -1;
+        for (var i = 0; i < this.items.length; i++) {
+            var nextItem = this.items[i];
+            if (nextItem.type === Meal.SALAD & nextItem.name === name) {
+                index = i;
+                break
+            }
+        }
+
+        // remove defined amound of salad if found
+        if (index >= 0) {
+            if (weight == undefined | this.items[index].weight <= weight) {
+                // remove salad object from order sinse zero weight remains
+                var removedItem = this.items.splice(index, 1);
+                console.log(removedItem[0].name, Meal.SALAD, 'was removed from order');
+            } else {
+                // decrease weight of salad in order
+                this.items[index].weight -= weight;
+                console.log(String(weight), 'gramm of', name, Meal.SALAD, 'was removed from order');
+            }
+        } else {
+            console.log(name, Meal.SALAD, 'to remove not found in order');
+        }
+
+        return this;
     },
 
+    /**
+     * Remove target Drink from order if exists
+     * 
+     * @param {String} name 
+     */
     removeDrink(name) {
-        // remove target drink if exists
+
+        if (this._submitted) {
+            console.log('order was submitted and can not be updated any more');
+            return this;
+        }
+
+        // try to find drink in order
+        var index = -1;
+        for (var i = 0; i < this.items.length; i++) {
+            var nextItem = this.items[i];
+            if (nextItem.type === Meal.DRINK & nextItem.name === name) {
+                index = i;
+                break
+            }
+        }
+
+        // remove drink if found
+        if (index >= 0) {
+            var removedItem = this.items.splice(index, 1);
+            console.log(removedItem[0].name, 'was removed from order');
+        } else {
+            console.log(name, 'to remove not found in order');
+        }
+
+        return this;
     },
     
     /**
-     * Submut current order
+     * Submit current order
      * After that, it is impossible to add or remove items from order
      */
     submit() {
-        Object.defineProperty(this, 'items', {writable: false});
+        // freeze each item content
+        for (var i = 0; i < this.items.length; i++) {
+            var nextItem = this.items[i];
+            Object.freeze(nextItem);
+        }
+
+        // freeze items length
+        Object.freeze(this.items);
+
+        // mark order as submitted
+        this._submitted = true;
+        console.log('order submitted');
     },
 
     /**
-     * Calculate price for items selected
+     * Calculate price for order
      */
     calculatePrice() {
         var price = 0;
@@ -132,7 +250,7 @@ module.exports = {
     },
 
     /**
-     * Calculate calories for items selected
+     * Calculate calories for order
      */
     calculateCalories() {
         var calories = 0;
@@ -165,6 +283,7 @@ Meal.DRINK = 'drink';
 
 /**
  * Calculate Meal price
+ * 
  * @return {Number} Price in tugrics
  */
 Meal.prototype.calculatePrice = function() {
@@ -173,6 +292,7 @@ Meal.prototype.calculatePrice = function() {
 
 /**
  * Calculate Meal calories
+ * 
  * @return {Number} Calories
  */
 Meal.prototype.calculateCalories = function() {
@@ -218,6 +338,7 @@ Hamburger.LARGE = 'large';
 
 /**
  * Calculate price of Hamburger including stuffing
+ * 
  * @return {Number} Price in tugrics
  */
 Hamburger.prototype.calculatePrice = function() {
@@ -226,6 +347,7 @@ Hamburger.prototype.calculatePrice = function() {
 
 /**
  * Calculate calories for Hamburger including stuffing
+ * 
  * @return {Number} Calories
  */
 Hamburger.prototype.calculateCalories = function() {
@@ -248,11 +370,12 @@ function Salad(name, weight, price, calories) {
 }
 Salad.prototype = Object.create(Meal.prototype);
 Salad.prototype.constructor = Salad;
-Salad.RUSSIAN = 'russian salad';
+Salad.RUSSIAN = 'russian';
 Salad.CAESAR = 'caesar';
 
 /**
  * Calculate price of Salad with portion weight taken into account
+ * 
  * @return {Number} Price in tugrics
  */
 Salad.prototype.calculatePrice = function() {
